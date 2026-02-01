@@ -1,0 +1,55 @@
+FROM python:3.11-slim
+
+# CPU-only Dockerfile for VisionText
+# - Uses a slim Python base image (no CUDA libraries)
+# - Installs CPU PyTorch wheels (via official PyTorch CPU index) and then
+#   installs the rest of Python requirements from requirements.txt
+
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    ffmpeg \
+    git \
+    build-essential \
+    cmake \
+    wget \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PIP_NO_CACHE_DIR=0
+ENV PIP_DEFAULT_TIMEOUT=100
+ENV HF_HOME=/app/models/huggingface
+ENV TRANSFORMERS_CACHE=/app/models/huggingface/transformers
+
+RUN mkdir -p /app/models/huggingface
+
+COPY requirements.txt .
+
+# Install CPU PyTorch wheels first (official CPU index). If this index is
+# unavailable for a particular platform, the fallback pip install will try
+# the default index which may provide a CPU wheel.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pip/http \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        "torch" "torchvision" "torchaudio" || \
+    pip install --no-cache-dir "torch" "torchvision" "torchaudio" || true
+
+# Install the remaining Python requirements
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pip/http \
+    pip install --cache-dir /root/.cache/pip -r requirements.txt
+
+# Preload models (optional) and copy app files
+COPY docker/preload_models.py /preload_models.py
+RUN python /preload_models.py || true
+
+COPY app ./app
+COPY static ./static
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

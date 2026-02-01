@@ -1,0 +1,57 @@
+ARG BASE_IMAGE=nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM ${BASE_IMAGE}
+
+# GPU Dockerfile for VisionText
+# - Uses an NVIDIA CUDA runtime base image. Pick a tag that matches your
+#   host drivers and desired CUDA version.
+# - Installs the CUDA-enabled PyTorch wheels (example uses cu121 wheels)
+#   and then installs the rest of the Python requirements.
+
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-venv \
+    tesseract-ocr \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    ffmpeg \
+    git \
+    build-essential \
+    cmake \
+    wget \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PIP_NO_CACHE_DIR=0
+ENV PIP_DEFAULT_TIMEOUT=100
+ENV HF_HOME=/app/models/huggingface
+ENV TRANSFORMERS_CACHE=/app/models/huggingface/transformers
+
+RUN mkdir -p /app/models/huggingface
+
+COPY requirements.txt .
+
+# Install CUDA-enabled PyTorch wheels for CUDA 12.1 (cu121). Adjust the
+# index URL and wheel tags if you choose a different CUDA version.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pip/http \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
+        "torch" "torchvision" "torchaudio" || \
+    echo "Failed to install CUDA wheels from official index; ensure the BASE_IMAGE CUDA version matches wheel tags" && exit 1
+
+# Install remaining Python deps
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pip/http \
+    pip install --cache-dir /root/.cache/pip -r requirements.txt
+
+COPY docker/preload_models.py /preload_models.py
+RUN python /preload_models.py || true
+
+COPY app ./app
+COPY static ./static
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VisionText — Model Tester</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px}
+    .models{display:flex;gap:20px}
+    .col{flex:1}
+    pre{background:#f6f8fa;padding:10px;border-radius:6px}
+    .results{display:flex;gap:12px;flex-wrap:wrap}
+    .result{border:1px solid #ddd;padding:10px;border-radius:6px;min-width:200px}
+  </style>
+</head>
+<body>
+  <h2>VisionText — Model Tester</h2>
+  <p>Wähle Modelle, lade ein Bild hoch und teste API-Aufrufe. Aktiviere Vergleichsmodus, um parallele Requests zu senden.</p>
+
+  <section>
+    <label>Bild: <input type="file" id="file" accept="image/*"></label>
+  </section>
+
+  <section style="margin-top:12px">
+    <label><input type="checkbox" id="compare"> Vergleichsmodus (parallel)</label>
+  </section>
+
+  <section class="models" style="margin-top:12px">
+    <div class="col">
+      <h4>OCR-Modelle</h4>
+      <div id="ocr-list"></div>
+    </div>
+    <div class="col">
+      <h4>Vision-Modelle</h4>
+      <div id="vision-list"></div>
+    </div>
+  </section>
+
+  <p style="margin-top:12px">
+    <button id="run">Run Test</button>
+  </p>
+
+  <h4>curl Beispiel</h4>
+  <pre id="curl">Wähle ein Bild und Modelle</pre>
+
+  <h4>Ergebnisse</h4>
+  <div id="out" class="results"></div>
+
+  <script>
+    const api = (path)=> (location.hostname === '' ? 'http://localhost:8000'+path : `${location.protocol}//${location.hostname}:8000${path}`)
+
+    async function loadModels(){
+      const r = await fetch(api('/models'))
+      const j = await r.json()
+      const ocr = document.getElementById('ocr-list')
+      const vision = document.getElementById('vision-list')
+      j.ocr.forEach(m=>{
+        const id = 'ocr-'+m
+        const el = document.createElement('div')
+        el.innerHTML = `<label><input type=checkbox name=ocr value="${m}" id="${id}"> ${m}</label>`
+        ocr.appendChild(el)
+      })
+      j.vision.forEach(m=>{
+        const id = 'vis-'+m
+        const el = document.createElement('div')
+        el.innerHTML = `<label><input type=checkbox name=vision value="${m}" id="${id}"> ${m}</label>`
+        vision.appendChild(el)
+      })
+    }
+
+    function buildCurl(selectedOcr, selectedVis){
+      const parts = []
+      parts.push('curl -X POST http://localhost:8000/analyze -H "Accept: application/json"')
+      parts.push('-F "file=@/path/to/image.jpg"')
+      const req = {ocr_models:selectedOcr, vision_models:selectedVis}
+      parts.push(`-F "request=${JSON.stringify(req)};type=application/json"`)
+      return parts.join(' \\n+')
+    }
+
+    async function runTest(){
+      const file = document.getElementById('file').files[0]
+      if(!file){ alert('Bitte wähle eine Bilddatei'); return }
+      const ocr = Array.from(document.querySelectorAll('input[name=ocr]:checked')).map(x=>x.value)
+      const vis = Array.from(document.querySelectorAll('input[name=vision]:checked')).map(x=>x.value)
+      if(ocr.length===0 && vis.length===0){ alert('Wähle mindestens ein Modell'); return }
+
+      document.getElementById('curl').textContent = buildCurl(ocr, vis)
+      const compare = document.getElementById('compare').checked
+      const out = document.getElementById('out')
+      out.innerHTML = ''
+
+      if(compare){
+        const all = [...ocr, ...vis]
+        await Promise.all(all.map(async (m)=>{
+          const form = new FormData()
+          form.append('file', file, file.name)
+          const req = {ocr_models: ocr.includes(m)?[m]:[], vision_models: vis.includes(m)?[m]:[]}
+          form.append('request', JSON.stringify(req))
+          const r = await fetch(api('/analyze'), {method:'POST', body:form})
+          const json = await r.json()
+          const el = document.createElement('div')
+          el.className = 'result'
+          el.innerHTML = `<strong>${m}</strong>\n<pre>${JSON.stringify(json,null,2)}</pre>`
+          out.appendChild(el)
+        }))
+      } else {
+        const form = new FormData()
+        form.append('file', file, file.name)
+        form.append('request', JSON.stringify({ocr_models:ocr, vision_models:vis}))
+        const r = await fetch(api('/analyze'), {method:'POST', body:form})
+        const json = await r.json()
+        const el = document.createElement('div')
+        el.className = 'result'
+        el.innerHTML = `<strong>Result</strong><pre>${JSON.stringify(json,null,2)}</pre>`
+        out.appendChild(el)
+      }
+    }
+
+    document.getElementById('run').addEventListener('click', runTest)
+    loadModels()
+  </script>
+</body>
+</html>
