@@ -25,6 +25,4 @@ volumes:
   models_cache:
     driver: local
 
-networks:
-  default:
-    name: visiontext_network
+# Netzwerk wird von Coolify/Traefik verwaltet - nicht hier definieren
