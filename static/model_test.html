@@ -51,34 +51,50 @@
   <div id="out" class="results"></div>
 
   <script>
-    const api = (path)=> (location.hostname === '' ? 'http://localhost:8000'+path : `${location.protocol}//${location.hostname}:8000${path}`)
+    // API endpoint detection
+    // Lokal: localhost:8000 (dev)
+    // Production: domain ohne Port (Traefik routet automatisch)
+    const api = (path) => {
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000' + path
+      } else {
+        // Production: Traefik routet über HTTPS, kein Port nötig
+        return `${location.protocol}//${location.hostname}${path}`
+      }
+    }
 
     async function loadModels(){
-      const r = await fetch(api('/models'))
-      const j = await r.json()
-      const ocr = document.getElementById('ocr-list')
-      const vision = document.getElementById('vision-list')
-      j.ocr.forEach(m=>{
-        const id = 'ocr-'+m
-        const el = document.createElement('div')
-        el.innerHTML = `<label><input type=checkbox name=ocr value="${m}" id="${id}"> ${m}</label>`
-        ocr.appendChild(el)
-      })
-      j.vision.forEach(m=>{
-        const id = 'vis-'+m
-        const el = document.createElement('div')
-        el.innerHTML = `<label><input type=checkbox name=vision value="${m}" id="${id}"> ${m}</label>`
-        vision.appendChild(el)
-      })
+      try {
+        const r = await fetch(api('/models'))
+        const j = await r.json()
+        const ocr = document.getElementById('ocr-list')
+        const vision = document.getElementById('vision-list')
+        j.ocr.forEach(m=>{
+          const id = 'ocr-'+m
+          const el = document.createElement('div')
+          el.innerHTML = `<label><input type=checkbox name=ocr value="${m}" id="${id}"> ${m}</label>`
+          ocr.appendChild(el)
+        })
+        j.vision.forEach(m=>{
+          const id = 'vis-'+m
+          const el = document.createElement('div')
+          el.innerHTML = `<label><input type=checkbox name=vision value="${m}" id="${id}"> ${m}</label>`
+          vision.appendChild(el)
+        })
+      } catch(e) {
+        console.error('Failed to load models:', e)
+        document.getElementById('ocr-list').innerHTML = '<div style="color:red">Error loading models</div>'
+      }
     }
 
     function buildCurl(selectedOcr, selectedVis){
       const parts = []
-      parts.push('curl -X POST http://localhost:8000/analyze -H "Accept: application/json"')
+      const apiUrl = api('/analyze').replace(/^https?:\/\//, 'http://')
+      parts.push(`curl -X POST ${apiUrl} -H "Accept: application/json"`)
       parts.push('-F "file=@/path/to/image.jpg"')
       const req = {ocr_models:selectedOcr, vision_models:selectedVis}
       parts.push(`-F "request=${JSON.stringify(req)};type=application/json"`)
-      return parts.join(' \\n+')
+      return parts.join(' \\n  ')
     }
 
     async function runTest(){
