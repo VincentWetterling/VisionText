@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 pillow
+pillow-heif
 pytesseract
 easyocr
 transformers

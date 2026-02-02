@@ -1,5 +1,21 @@
 # VisionText Docker Setup
 
+## Features
+
+✅ **Mehrere Bildformate unterstützt:**
+- JPEG, JPE, JPG
+- PNG (mit Transparenz-Handling)
+- WEBP  
+- **HEIC/HEIF** (iPhones & Apple devices) 🆕
+- GIF (animated & static)
+- BMP, DIB
+- TIFF, TIF
+- ICO
+
+✅ **Base64 & File Upload**
+✅ **Model Caching** (Models nicht bei jedem Start neu laden)
+✅ **OCR + Vision Models parallel**
+
 ## Schnellstart mit Docker Compose
 
 ### Installation & Start
@@ -45,6 +61,13 @@ curl -X POST http://localhost:8000/analyze \
 curl -X POST http://localhost:8000/analyze \
   -F "file=@bild.jpg" \
   -F 'request={"ocr_models":["tesseract","easyocr"],"vision_models":["blip"]}'
+```
+
+#### Mit HEIC-Bild (iPhone Photo) 📱
+```bash
+curl -X POST http://localhost:8000/analyze \
+  -F "file=@iphone_photo.heic" \
+  -F 'request={"ocr_models":["tesseract"],"vision_models":["blip"]}'
 ```
 
 #### Mehrere OCR-Modelle vergleichen (parallel)
