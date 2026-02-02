@@ -2,10 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api.routes import router
 import logging
 import warnings
 import os
+import sys
+
+# Ensure app is in path for imports
+app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if app_dir not in sys.path:
+    sys.path.insert(0, app_dir)
+
+# Now import app modules
+from app.api.routes import router
 
 # Reduce noisy logs from third-party libs (transformers/huggingface, torch, easyocr)
 # Set environment flags to reduce HF telemetry and make transformers quieter when possible

@@ -247,23 +247,28 @@ docker-compose up -d
 **Fehler: "Port 8000 already allocated"**
 → Stelle sicher, dass du `docker-compose.production.yml` in Coolify eintragst!
 
+**Fehler: "Error loading ASGI app. Could not import module 'app.main'"**
+→ Wahrscheinlich falsche docker-compose Datei
+- ✅ Verwende `docker-compose.production.yml`
+- ✅ Diese hat die App direkt im Image (keine Live-Mounts)
+
+**Build dauert zu lange / lädt Modelle**
+→ Erstes Deployment ist normal langsam (~5 Min)
+- ✅ Modelle werden nur beim ersten Build heruntergeladen
+- ✅ Nachfolgende Deployments sind schneller
+
 ```bash
 # Lokale Logs
 docker logs visiontext-api
 
 # Coolify Logs (remote)
 # Über Coolify UI unter Application Logs
-```
-
-**Fehler: "Cannot pull base image"**
-→ Dockerfile.cpu benötigt Internet für `python:3.11-slim`
-→ Stelle sicher, dass der Coolify-Server Internet-Zugriff hat
 
 # Shell in Container
 docker-compose exec visiontext bash
 
 # Cache löschen (nur falls nötig)
-docker volume rm visiontext_huggingface_cache
+docker volume rm visiontext_models_cache
 
 # Memory-Limit setzen (bei limited Resources)
 # In docker-compose.yml unter 'visiontext':

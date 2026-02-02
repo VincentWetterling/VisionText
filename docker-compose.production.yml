@@ -11,10 +11,6 @@ services:
     volumes:
       # Cache volume für Modelle (persistent)
       - models_cache:/app/models
-      
-      # Application code (live-reload optional)
-      - ./app:/app/app
-      - ./static:/app/static
     restart: unless-stopped
     # Health check
     healthcheck:

@@ -26,6 +26,8 @@ ENV PIP_NO_CACHE_DIR=0
 ENV PIP_DEFAULT_TIMEOUT=100
 ENV HF_HOME=/app/models/huggingface
 ENV TRANSFORMERS_CACHE=/app/models/huggingface/transformers
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 RUN mkdir -p /app/models/huggingface
 
@@ -45,11 +47,15 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/root/.cache/pip/http \
     pip install --cache-dir /root/.cache/pip -r requirements.txt
 
-# Preload models (optional) and copy app files
-COPY docker/preload_models.py /preload_models.py
-RUN python /preload_models.py || true
-
+# Copy app files FIRST before preload to ensure modules are available
 COPY app ./app
 COPY static ./static
+COPY docker/preload_models.py /preload_models.py
+
+# Preload models (optional)
+RUN python /preload_models.py || true
+
+# Ensure app is importable
+RUN python -c "from app.main import app; print('✓ app.main imported successfully')" || true
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
