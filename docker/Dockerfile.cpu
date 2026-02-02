@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     wget \
     libsndfile1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -51,6 +52,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY app ./app
 COPY static ./static
 COPY docker/preload_models.py /preload_models.py
+COPY docker/healthcheck.py /healthcheck.py
 
 # Preload models (optional)
 RUN python /preload_models.py || true

@@ -12,13 +12,14 @@ services:
       # Cache volume für Modelle (persistent)
       - models_cache:/app/models
     restart: unless-stopped
-    # Health check
+    # Health check - Python-basiert für Zuverlässigkeit
+    # start_period: 120s weil Modelle beim Start geladen werden
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/models"]
+      test: ["CMD", "python", "/healthcheck.py"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 180s
 
 volumes:
   models_cache:
