@@ -73,4 +73,15 @@ async def serve_ui():
         return FileResponse(html_file, media_type='text/html')
     return {'detail': 'UI not found'}
 
+# Health check endpoint
+@app.get('/health')
+@app.get('/healthz')
+async def health_check():
+    return {'status': 'healthy', 'version': '0.1.0'}
+
+# Root endpoint (redirect to UI)
+@app.get('/')
+async def root():
+    return {'message': 'VisionText API', 'docs': '/docs', 'ui': '/ui'}
+
 app.include_router(router)

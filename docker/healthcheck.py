@@ -14,8 +14,8 @@ def check_health(max_retries=3):
     """Check if the API is responding"""
     for attempt in range(max_retries):
         try:
-            # Try localhost (internal container check)
-            response = urllib.request.urlopen('http://127.0.0.1:8000/models', timeout=5)
+            # Try the dedicated /healthz endpoint (fastest)
+            response = urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)
             
             if response.status == 200:
                 print("✓ Health check passed")
