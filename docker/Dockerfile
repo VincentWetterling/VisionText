@@ -26,6 +26,8 @@ ENV PIP_NO_CACHE_DIR=0
 ENV PIP_DEFAULT_TIMEOUT=100
 ENV HF_HOME=/app/models/huggingface
 ENV TRANSFORMERS_CACHE=/app/models/huggingface/transformers
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # create the directory early so downloads are stored in image layers
 RUN mkdir -p /app/models/huggingface
@@ -50,7 +52,16 @@ RUN mkdir -p /app/models/huggingface
 
 COPY requirements.txt .
 
-# Install Python deps using BuildKit cache for pip
+# Install CPU PyTorch wheels first (official CPU index). If this index is
+# unavailable for a particular platform, the fallback pip install will try
+# the default index which may provide a CPU wheel.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pip/http \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+        "torch" "torchvision" "torchaudio" || \
+    pip install --no-cache-dir "torch" "torchvision" "torchaudio" || true
+
+# Install the remaining Python requirements
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/root/.cache/pip/http \
     pip install --cache-dir /root/.cache/pip -r requirements.txt
@@ -63,4 +74,9 @@ RUN python /preload_models.py || true
 COPY app ./app
 # Copy static assets so FastAPI StaticFiles can serve the UI
 COPY static ./static
+COPY docker/healthcheck.py /healthcheck.py
+
+# Ensure app is importable
+RUN python -c "from app.main import app; print('✓ app.main imported successfully')" || true
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
