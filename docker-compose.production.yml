@@ -3,10 +3,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.cpu
-    container_name: visiontext-api
-    # Ports nur für lokale Entwicklung exponieren
-    ports:
-      - "8000:8000"
     environment:
       - HF_HUB_DISABLE_TELEMETRY=1
       - TRANSFORMERS_NO_ADVISORY_WARNINGS=1

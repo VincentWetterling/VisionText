@@ -45,9 +45,20 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Docker (CPU build)
 ------------------
 
-Build the CPU-only Docker image (uses a slim Python base image and CPU wheels):
+### Using Docker Compose (recommended)
 
-```powershell
+```bash
+docker-compose up -d
+
+# API at http://localhost:8000
+# UI at http://localhost:8000/ui
+# Models cached in Docker Volume
+```
+
+**For Coolify Deployment:** Use `docker-compose.production.yml` instead!
+See [DOCKER_SETUP.md](DOCKER_SETUP.md#coolify-deployment) for details.
+
+### Manual Docker Build
 $env:DOCKER_BUILDKIT=1
 docker build -t visiontext:app-cpu -f docker/Dockerfile.cpu .
 ```

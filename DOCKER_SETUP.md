@@ -203,11 +203,18 @@ Wenn Coolify standardmäßig Dockerfiles deployed:
 ### Option 2: Docker Compose (recommended für VisionText)
 Wenn Coolify docker-compose unterstützt:
 
-1. **Git-Repo mit docker-compose.yml pushen**
-2. **In Coolify:**
+**WICHTIG für Coolify:** Verwende die `docker-compose.production.yml`!
+
+1. **In Coolify Settings:**
    - Service Type: `Docker Compose`
-   - Compose File: `docker-compose.yml`
+   - Compose File: `docker-compose.production.yml` ⚠️ (NICHT docker-compose.yml!)
    - Build Context: `.`
+
+2. **Warum docker-compose.production.yml?**
+   - ✅ Keine Port-Exposition (Traefik routet intern)
+   - ✅ Verhindert "Port already allocated" Fehler
+   - ✅ Traefik Route ist über FQDN (z.B. visiontext.loozia.de)
+
 3. **Umgebungsvariablen in Coolify setzen:**
    ```
    HF_HUB_DISABLE_TELEMETRY=1
@@ -215,24 +222,42 @@ Wenn Coolify docker-compose unterstützt:
    HF_HOME=/app/models/huggingface
    ```
 
-**Vorteil:** Model-Cache bleibt in Volume persistent erhalten auch nach Redeploy!
+4. **Volumes in Coolify:**
+   - Docker wird automatisch ein Volume für `/app/models` erstellen
+   - Model-Cache bleibt persistent erhalten!
+
+### Lokale Entwicklung vs. Coolify
+
+**Lokal (docker-compose.yml):**
+```bash
+docker-compose up -d
+# → localhost:8000 (Port exponiert)
+```
+
+**Coolify (docker-compose.production.yml):**
+```
+# Coolify nutzt die .production.yml
+# → Kein Port-Binding nötig
+# → Traefik routet: visiontext.loozia.de → container:8000
+# → Automatisch HTTPS + TLS
+```
 
 ### Troubleshooting
 
+**Fehler: "Port 8000 already allocated"**
+→ Stelle sicher, dass du `docker-compose.production.yml` in Coolify eintragst!
+
 ```bash
-# Container-Logs
-docker-compose logs -f visiontext-api
+# Lokale Logs
+docker logs visiontext-api
 
-# Shell in Container
-docker-compose exec visiontext-api bash
-
-# Memory-Limit (falls needed)
-# In docker-compose.yml unter 'visiontext':
-#   deploy:
-#     resources:
-#       limits:
-#         memory: 4G
+# Coolify Logs (remote)
+# Über Coolify UI unter Application Logs
 ```
+
+**Fehler: "Cannot pull base image"**
+→ Dockerfile.cpu benötigt Internet für `python:3.11-slim`
+→ Stelle sicher, dass der Coolify-Server Internet-Zugriff hat
 
 # Shell in Container
 docker-compose exec visiontext bash
