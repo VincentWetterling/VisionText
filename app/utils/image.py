@@ -50,11 +50,22 @@ def load_image(image_bytes):
             if img.mode == 'P':
                 img = img.convert('RGBA')
             background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-            return background
+            img = background
         elif img.mode != 'RGB':
-            return img.convert('RGB')
-        else:
-            return img
+            img = img.convert('RGB')
+        
+        # Clean the image by saving and reloading
+        # This removes any metadata that might cause issues with OCR engines
+        # Especially important for HEIC images
+        temp_buffer = BytesIO()
+        img.save(temp_buffer, format='PNG')
+        temp_buffer.seek(0)
+        img = Image.open(temp_buffer)
+        
+        # Load into memory to avoid keeping the BytesIO open
+        img.load()
+        
+        return img
     except Exception as e:
         logger.error(f"Failed to load image: {e}")
         raise ValueError(f"Could not load image: {str(e)}. Supported formats: JPEG, PNG, WEBP, HEIC, GIF, BMP, TIFF, ICO")
