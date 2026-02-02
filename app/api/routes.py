@@ -10,10 +10,25 @@ router = APIRouter()
 
 @router.post("/analyze", response_model=VisionTextResponse)
 async def analyze_image(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    base64: str = Form(None),
     request: str = Form(None)
 ):
-    image_bytes = await file.read()
+    image_bytes = None
+    
+    # Handle file upload or base64 input
+    if file:
+        image_bytes = await file.read()
+    elif base64:
+        import base64 as b64_module
+        try:
+            # Try to decode base64 string directly
+            image_bytes = b64_module.b64decode(base64.split(',')[-1])  # Handle "data:image/..." format
+        except Exception as e:
+            raise ValueError(f"Invalid base64 string: {str(e)}")
+    else:
+        raise ValueError("Either 'file' or 'base64' parameter is required")
+    
     parsed = None
     if request:
         try:

@@ -18,7 +18,11 @@
   <p>Wähle Modelle, lade ein Bild hoch und teste API-Aufrufe. Aktiviere Vergleichsmodus, um parallele Requests zu senden.</p>
 
   <section>
-    <label>Bild: <input type="file" id="file" accept="image/*"></label>
+    <div>
+      <label>Bild-Datei: <input type="file" id="file" accept="image/*"></label>
+      <p style="font-size:0.9em;color:#666">oder</p>
+      <label>Base64-Bild: <textarea id="base64" placeholder="Paste base64 encoded image here..." style="width:100%;height:100px;font-family:monospace;font-size:0.85em"></textarea></label>
+    </div>
   </section>
 
   <section style="margin-top:12px">
@@ -79,7 +83,8 @@
 
     async function runTest(){
       const file = document.getElementById('file').files[0]
-      if(!file){ alert('Bitte wähle eine Bilddatei'); return }
+      const b64 = document.getElementById('base64').value.trim()
+      if(!file && !b64){ alert('Bitte wähle eine Bilddatei oder füge Base64 ein'); return }
       const ocr = Array.from(document.querySelectorAll('input[name=ocr]:checked')).map(x=>x.value)
       const vis = Array.from(document.querySelectorAll('input[name=vision]:checked')).map(x=>x.value)
       if(ocr.length===0 && vis.length===0){ alert('Wähle mindestens ein Modell'); return }
@@ -93,19 +98,27 @@
         const all = [...ocr, ...vis]
         await Promise.all(all.map(async (m)=>{
           const form = new FormData()
-          form.append('file', file, file.name)
+          if(b64){
+            form.append('base64', b64)
+          } else {
+            form.append('file', file, file.name)
+          }
           const req = {ocr_models: ocr.includes(m)?[m]:[], vision_models: vis.includes(m)?[m]:[]}
           form.append('request', JSON.stringify(req))
           const r = await fetch(api('/analyze'), {method:'POST', body:form})
           const json = await r.json()
           const el = document.createElement('div')
           el.className = 'result'
-          el.innerHTML = `<strong>${m}</strong>\n<pre>${JSON.stringify(json,null,2)}</pre>`
+          el.innerHTML = `<strong>${m}</strong><pre>${JSON.stringify(json,null,2)}</pre>`
           out.appendChild(el)
         }))
       } else {
         const form = new FormData()
-        form.append('file', file, file.name)
+        if(b64){
+          form.append('base64', b64)
+        } else {
+          form.append('file', file, file.name)
+        }
         form.append('request', JSON.stringify({ocr_models:ocr, vision_models:vis}))
         const r = await fetch(api('/analyze'), {method:'POST', body:form})
         const json = await r.json()

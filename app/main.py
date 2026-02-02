@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from app.api.routes import router
 import logging
 import warnings
@@ -46,7 +47,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static UI at /ui (model_test.html)
-app.mount('/ui', StaticFiles(directory='static', html=True), name='static')
+# Determine static directory
+if os.path.exists('/app/static'):
+    static_dir = '/app/static'
+else:
+    static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
+
+# Serve all static files
+app.mount('/static', StaticFiles(directory=static_dir), name='static')
+
+# Serve UI HTML directly
+@app.get('/ui')
+@app.get('/ui/')
+async def serve_ui():
+    html_file = os.path.join(static_dir, 'model_test.html')
+    if os.path.exists(html_file):
+        return FileResponse(html_file, media_type='text/html')
+    return {'detail': 'UI not found'}
 
 app.include_router(router)

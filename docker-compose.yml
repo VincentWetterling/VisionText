@@ -1,0 +1,36 @@
+services:
+  visiontext:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+    container_name: visiontext-api
+    ports:
+      - "8000:8000"
+    environment:
+      - HF_HUB_DISABLE_TELEMETRY=1
+      - TRANSFORMERS_NO_ADVISORY_WARNINGS=1
+      - HF_HOME=/app/models/huggingface
+      - TRANSFORMERS_CACHE=/app/models/huggingface/transformers
+    volumes:
+      # Cache volume für Modelle (persistent)
+      - models_cache:/app/models
+      
+      # Application code (live-reload optional)
+      - ./app:/app/app
+      - ./static:/app/static
+    restart: unless-stopped
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  models_cache:
+    driver: local
+
+networks:
+  default:
+    name: visiontext_network
