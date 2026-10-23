@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-pillow
+# Mindestversion nötig: torchvision aus dem PyTorch-Index bringt sonst Pillow 12.3 mit (Heap-Overflow u. a., Fix in 13.0.0)
+pillow>=13.0.0
 pillow-heif
 pytesseract
 easyocr
